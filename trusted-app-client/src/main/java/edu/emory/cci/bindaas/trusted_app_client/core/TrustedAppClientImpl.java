@@ -48,7 +48,7 @@ public class TrustedAppClientImpl implements ITrustedAppClient{
 		String nonce = DatatypeConverter.printBase64Binary(nonceBytes);
 
 		String predigest = String.format("%s|%s|%s|%s", username, nonce,
-				applicationKey, salt);
+				applicationID, salt);
 		String digest = DatatypeConverter.printBase64Binary(MessageDigest
 				.getInstance("SHA-1").digest(predigest.getBytes("UTF-8")));
 		
