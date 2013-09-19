@@ -1,10 +1,26 @@
 Bindaas Trusted App Client API
 ==============================
 
-Trusted App Client API for Bindaas.
-Using the Trusted App API , third-party applications can tap into Bindaas's internal security
-system to manage API Keys for users. Typically, it allows for authorizing new user access,issuing short-lived API Keys
-and revoking them.
+
+## Trusted Application Framework
+Bindaas provides a framework for applications that are "trusted" by Bindaas to tap into Bindaas's internal sescurity system
+and manage API Keys. 
+
+Following operations are supported through Trusted Application API :
+1. Authorize New User
+2. Revoke Access of User
+3. Issue Short Lived API Key.
+
+Each Trusted Application is issued the following by the Bindaas's system-administrator :
+1. application-id
+2. application-secret
+
+Using these two parameters and the cryptographic algorithm described below a Trusted Application asserts it's identity
+and message integrity to Bindaas Server.
+
+##### Algorithm :
+ 
+
 
 ## Command Line Options
 ```
