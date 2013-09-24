@@ -98,7 +98,7 @@ public class TrustedAppClientImpl implements ITrustedAppClient{
 			apiKey.setValue(serverResponseJson.get("api_key").getAsString());
 			apiKey.setApplicationID(serverResponseJson.get("applicationID").getAsString());
 			apiKey.setApplicationName(serverResponseJson.get("applicationName").getAsString());
-			apiKey.setExpires(serverResponseJson.get("expires").getAsLong());
+			apiKey.setExpires(serverResponseJson.get("expires").getAsString());
 			return apiKey;
 		}
 

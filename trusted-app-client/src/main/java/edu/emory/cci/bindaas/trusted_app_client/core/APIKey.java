@@ -1,12 +1,10 @@
 package edu.emory.cci.bindaas.trusted_app_client.core;
 
-import java.util.Date;
-
 import com.google.gson.annotations.Expose;
 
 public class APIKey {
 	@Expose private String value;
-	@Expose private Date expires;
+	@Expose private String expires;
 	@Expose private String applicationName;
 	@Expose private String applicationID;
 	
@@ -18,10 +16,10 @@ public class APIKey {
 	public void setValue(String value) {
 		this.value = value;
 	}
-	public Date getExpires() {
+	public String getExpires() {
 		return expires;
 	}
-	public void setExpires(Date expires) {
+	public void setExpires(String expires) {
 		this.expires = expires;
 	}
 	public String getApplicationName() {
@@ -36,10 +34,7 @@ public class APIKey {
 	public void setApplicationID(String applicationID) {
 		this.applicationID = applicationID;
 	}
-	public void setExpires(long asLong) {
-		this.expires = new Date(asLong);
-		
-	}
+	
 	
 	
 	
