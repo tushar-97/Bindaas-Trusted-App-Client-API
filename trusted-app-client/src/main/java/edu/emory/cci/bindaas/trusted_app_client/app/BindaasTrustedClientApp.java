@@ -2,6 +2,7 @@ package edu.emory.cci.bindaas.trusted_app_client.app;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
@@ -95,6 +96,13 @@ public class BindaasTrustedClientApp {
 	    			Arguments authArg = parseShortLivedArguments(line);
 	    			TrustedAppClientImpl client = new TrustedAppClientImpl(authArg.baseUrl,authArg.applicationID, authArg.applicationSecret);
 	    			APIKey apiKey = client.getShortLivedAPIKey(authArg.username,authArg.lifetime);
+	    			System.out.println("Server Returned :\n" + gson.toJson(apiKey));
+	    		}
+	    		else if (action.equals("l"))
+	    		{
+	    			Arguments authArg = parseListAPIKeysArguments(line);
+	    			TrustedAppClientImpl client = new TrustedAppClientImpl(authArg.baseUrl,authArg.applicationID, authArg.applicationSecret);
+	    			List<APIKey> apiKey = client.listAPIKeys();
 	    			System.out.println("Server Returned :\n" + gson.toJson(apiKey));
 	    		}
 	    		else
@@ -253,6 +261,41 @@ public class BindaasTrustedClientApp {
 		if(line.hasOption("lifetime"))
 		{
 			args.lifetime = Integer.parseInt(line.getOptionValue("lifetime"));
+		}
+		
+	
+		return args;
+	}
+	
+	private Arguments parseListAPIKeysArguments(CommandLine line) throws IllegalArgumentException
+	{
+		Arguments args = new Arguments();
+		if(line.hasOption("url"))
+		{
+			args.baseUrl = line.getOptionValue("url");
+		}
+		else
+		{
+			throw new IllegalArgumentException("[url] not specified");
+		}
+		
+		if(line.hasOption("secret"))
+		{
+			args.applicationSecret = line.getOptionValue("secret");
+		}
+		else
+		{
+			throw new IllegalArgumentException("[secret] not specified");
+		}
+		
+		
+		if(line.hasOption("id"))
+		{
+			args.applicationID = line.getOptionValue("id");
+		}
+		else
+		{
+			throw new IllegalArgumentException("[id] not specified");
 		}
 		
 	

@@ -3,6 +3,9 @@ package edu.emory.cci.bindaas.trusted_app_client.core;
 import java.io.IOException;
 import java.net.URI;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.UUID;
 
 import javax.xml.bind.DatatypeConverter;
@@ -15,6 +18,8 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.DefaultHttpClient;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -184,6 +189,54 @@ public class TrustedAppClientImpl implements ITrustedAppClient{
 			{
 				serverDump(response);
 				throw new Exception("Unable to Revoke user [" + username + "]");
+			}
+		}
+
+
+
+		public List<APIKey> listAPIKeys()  throws Exception {
+			String salt = UUID.randomUUID().toString();
+			String username = UUID.randomUUID().toString(); // username for this method is not required. so assign any random value
+			String digest = calculateDigestValue(this.applicationID, this.applicationSecretKey, salt, username);
+			
+			URI baseUri = new URI(baseUrl);
+			URIBuilder uriBuilder = new URIBuilder(baseUri.toString() + "/listAPIkeys" );
+			
+			
+			HttpGet get = new HttpGet(uriBuilder.build());
+			get.addHeader("_username" , username);
+			get.addHeader("_salt" , salt);
+			get.addHeader("_digest" , digest);
+			get.addHeader("_applicationID" , this.applicationID);
+			HttpResponse response = httpClient.execute(get);
+			
+			StatusLine statusLine = response.getStatusLine();
+			if(statusLine.getStatusCode() == 200 && response.getEntity().getContent() !=null )
+			{
+				String retVal = convertStreamToString(response.getEntity().getContent());
+				JsonObject json = jsonParser.parse(retVal).getAsJsonObject();
+				JsonArray jsonArray = json.get("apiKeys").getAsJsonArray();
+				List<APIKey> apiKeyArray = new ArrayList<APIKey>();
+				Iterator<JsonElement> iter = jsonArray.iterator();
+				String applicationID = json.get("applicationID").getAsString();
+				String applicationName = json.get("applicationName").getAsString();
+				while(iter.hasNext())
+				{
+					JsonObject apiKeyJson = iter.next().getAsJsonObject();
+					APIKey apiKey = new APIKey();
+					apiKey.setApplicationID(applicationID);
+					apiKey.setApplicationName(applicationName);
+					apiKey.setExpires(apiKeyJson.get("dateExpires").getAsString());
+					apiKey.setValue(apiKeyJson.get("apiKey").getAsString());
+					apiKey.setUsername(apiKeyJson.get("emailAddress").getAsString());
+					apiKeyArray.add(apiKey);
+				}
+				return apiKeyArray;
+			}
+			else
+			{
+				serverDump(response);
+				throw new Exception("Unable to List Users");
 			}
 		}
 

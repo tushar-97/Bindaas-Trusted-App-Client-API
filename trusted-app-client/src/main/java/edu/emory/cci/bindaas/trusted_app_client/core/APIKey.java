@@ -1,5 +1,6 @@
 package edu.emory.cci.bindaas.trusted_app_client.core;
 
+import com.google.gson.Gson;
 import com.google.gson.annotations.Expose;
 
 public class APIKey {
@@ -7,9 +8,17 @@ public class APIKey {
 	@Expose private String expires;
 	@Expose private String applicationName;
 	@Expose private String applicationID;
+	@Expose private String username;
 	
+	private static Gson gson = new Gson();
+		
 	
-	
+	public String getUsername() {
+		return username;
+	}
+	public void setUsername(String username) {
+		this.username = username;
+	}
 	public String getValue() {
 		return value;
 	}
@@ -36,6 +45,9 @@ public class APIKey {
 	}
 	
 	
-	
+	public String toString()
+	{
+		return gson.toJson(this);
+	}
 	
 }

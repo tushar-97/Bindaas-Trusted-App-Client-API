@@ -1,5 +1,7 @@
 package edu.emory.cci.bindaas.trusted_app_client.core;
 
+import java.util.List;
+
 
 public interface ITrustedAppClient {
 
@@ -9,4 +11,5 @@ public APIKey authorizeNewUser( String username ,  Long epochTimeExpires  , Stri
 	
 public String revokeAccess( String username ,   String comments) throws Exception;
 
+public List<APIKey> listAPIKeys()  throws Exception ;
 }

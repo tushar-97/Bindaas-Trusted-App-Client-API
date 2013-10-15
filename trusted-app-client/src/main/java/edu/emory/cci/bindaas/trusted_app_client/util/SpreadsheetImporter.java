@@ -148,9 +148,9 @@ public class SpreadsheetImporter {
 		SpreadsheetImporter importer = new SpreadsheetImporter();
 		importer.setApplicationID("");
 		importer.setApplicationSecretKey("");
-		importer.setBaseUrl("http://localhost:9099/trustedApplication");
-		importer.setFilename("nlst-collection-user-list.csv");
-		importer.setReportFile("nlst-collection-user-list.report.csv");
+		importer.setBaseUrl("");
+		importer.setFilename("");
+		importer.setReportFile("");
 		importer.init();
 		importer.start();
 	}
