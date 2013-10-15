@@ -23,27 +23,28 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-public class TrustedAppClientImpl implements ITrustedAppClient{
-	
+import edu.emory.cci.bindaas.trusted_app_client.app.exception.ClientException;
+import edu.emory.cci.bindaas.trusted_app_client.app.exception.ServerException;
+
+public class TrustedAppClientImpl implements ITrustedAppClient {
+
 	private final static long ROUNDOFF_FACTOR = 100000;
-	private String baseUrl ;
+	private String baseUrl;
 	private String applicationID;
 	private String applicationSecretKey;
 	private DefaultHttpClient httpClient;
 	private JsonParser jsonParser;
-	
-	public TrustedAppClientImpl(String baseUrl , String applicationID , String applicationSecretKey)
-	{
+
+	public TrustedAppClientImpl(String baseUrl, String applicationID,
+			String applicationSecretKey) {
 		this.baseUrl = baseUrl;
 		this.applicationID = applicationID;
 		this.applicationSecretKey = applicationSecretKey;
 		this.httpClient = new DefaultHttpClient();
 		this.jsonParser = new JsonParser();
 	}
-	
-	
-	
-		public static String calculateDigestValue(String applicationID,
+
+	public static String calculateDigestValue(String applicationID,
 			String applicationKey, String salt, String username)
 			throws Exception {
 		long roundoff = System.currentTimeMillis() / ROUNDOFF_FACTOR;
@@ -56,189 +57,234 @@ public class TrustedAppClientImpl implements ITrustedAppClient{
 				applicationID, salt);
 		String digest = DatatypeConverter.printBase64Binary(MessageDigest
 				.getInstance("SHA-1").digest(predigest.getBytes("UTF-8")));
-		
-		System.out.println(String.format("Digest of (%s,%s,%s,%s,%s)=%s", applicationID , applicationKey , salt , username , roundoff + "" , digest));
+
+		System.out.println(String.format("Digest of (%s,%s,%s,%s,%s)=%s",
+				applicationID, applicationKey, salt, username, roundoff + "",
+				digest));
 
 		return digest;
 	}
-		static String convertStreamToString(java.io.InputStream is) {
-		    java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
-		    return s.hasNext() ? s.next() : "";
-		}
 
+	static String convertStreamToString(java.io.InputStream is) {
+		java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
+		return s.hasNext() ? s.next() : "";
+	}
 
-		public APIKey getShortLivedAPIKey(String username, Integer lifetime) throws Exception {
+	public APIKey getShortLivedAPIKey(String username, Integer lifetime)
+			throws ServerException, ClientException {
+		try {
 			String salt = UUID.randomUUID().toString();
-			String digest = calculateDigestValue(this.applicationID, this.applicationSecretKey, salt, username);
-			
+			String digest = calculateDigestValue(this.applicationID,
+					this.applicationSecretKey, salt, username);
+
 			URI baseUri = new URI(baseUrl);
-			URIBuilder uriBuilder = new URIBuilder(baseUri.toString() + "/issueShortLivedApiKey" );
+			URIBuilder uriBuilder = new URIBuilder(baseUri.toString()
+					+ "/issueShortLivedApiKey");
 			uriBuilder.addParameter("lifetime", lifetime.toString());
 			HttpGet get = new HttpGet(uriBuilder.build());
-			get.addHeader("_username" , username);
-			get.addHeader("_salt" , salt);
-			get.addHeader("_digest" , digest);
-			get.addHeader("_applicationID" , this.applicationID);
+			get.addHeader("_username", username);
+			get.addHeader("_salt", salt);
+			get.addHeader("_digest", digest);
+			get.addHeader("_applicationID", this.applicationID);
 			HttpResponse response = httpClient.execute(get);
-			
+
 			StatusLine statusLine = response.getStatusLine();
-			if(statusLine.getStatusCode() == 200 && response.getEntity().getContent() !=null )
-			{
+			if (statusLine.getStatusCode() == 200
+					&& response.getEntity().getContent() != null) {
 				return serverResponseToAPIKey(response);
+			} else {
+				String message = response.getEntity().getContent() != null ? convertStreamToString(response
+						.getEntity().getContent()) : "";
+				throw new ServerException(statusLine.getStatusCode(), message);
+
 			}
-			else
-			{
-				serverDump(response);
-				throw new Exception("Unable to fetch API Key");
-			}
-			
-			
+		} catch (ClientException e) {
+			throw e;
+		} catch (ServerException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new ClientException(e);
 		}
 
-		private  APIKey serverResponseToAPIKey ( HttpResponse response) throws IllegalStateException, IOException
-		{
-			String content = convertStreamToString(response.getEntity().getContent());
-			JsonObject serverResponseJson = jsonParser.parse(content).getAsJsonObject();
-			APIKey apiKey = new APIKey();
-			apiKey.setValue(serverResponseJson.get("api_key").getAsString());
-			apiKey.setApplicationID(serverResponseJson.get("applicationID").getAsString());
-			apiKey.setApplicationName(serverResponseJson.get("applicationName").getAsString());
-			apiKey.setExpires(serverResponseJson.get("expires").getAsString());
-			return apiKey;
+	}
+
+	private APIKey serverResponseToAPIKey(HttpResponse response)
+			throws IllegalStateException, IOException {
+		String content = convertStreamToString(response.getEntity()
+				.getContent());
+		JsonObject serverResponseJson = jsonParser.parse(content)
+				.getAsJsonObject();
+		APIKey apiKey = new APIKey();
+		apiKey.setValue(serverResponseJson.get("api_key").getAsString());
+		apiKey.setApplicationID(serverResponseJson.get("applicationID")
+				.getAsString());
+		apiKey.setApplicationName(serverResponseJson.get("applicationName")
+				.getAsString());
+		apiKey.setExpires(serverResponseJson.get("expires").getAsString());
+		return apiKey;
+	}
+
+	private static void serverDump(HttpResponse response)
+			throws IllegalStateException, IOException {
+		StringBuffer serverDump = new StringBuffer();
+		serverDump.append("Server Response Dump\nHeaders");
+		for (Header h : response.getAllHeaders()) {
+			serverDump.append(h.toString()).append("\n");
 		}
 
-		private static void serverDump(HttpResponse response) throws IllegalStateException, IOException
-		{
-			StringBuffer serverDump = new StringBuffer();
-			serverDump.append("Server Response Dump\nHeaders");
-			for(Header h : response.getAllHeaders())
-			{
-				serverDump.append(h.toString()).append("\n");
-			}
-			
-			
-			if(response.getEntity()!=null && response.getEntity().getContent()!=null)
-			{
-				serverDump.append("\nBody:\n");
-				serverDump.append(convertStreamToString(response.getEntity().getContent()));
-			}
-				
-			System.out.println(serverDump.toString());
+		if (response.getEntity() != null
+				&& response.getEntity().getContent() != null) {
+			serverDump.append("\nBody:\n");
+			serverDump.append(convertStreamToString(response.getEntity()
+					.getContent()));
 		}
 
-		public APIKey authorizeNewUser(String username, Long epochTimeExpires,
-				String comments) throws Exception{
-			
+		System.out.println(serverDump.toString());
+	}
+
+	public APIKey authorizeNewUser(String username, Long epochTimeExpires,
+			String comments) throws ServerException, ClientException {
+		try {
 			String salt = UUID.randomUUID().toString();
-			String digest = calculateDigestValue(this.applicationID, this.applicationSecretKey, salt, username);
-			
+			String digest = calculateDigestValue(this.applicationID,
+					this.applicationSecretKey, salt, username);
+
 			URI baseUri = new URI(baseUrl);
-			URIBuilder uriBuilder = new URIBuilder(baseUri.toString() + "/authorizeUser" );
-			
-			if(comments!=null)
+			URIBuilder uriBuilder = new URIBuilder(baseUri.toString()
+					+ "/authorizeUser");
+
+			if (comments != null)
 				uriBuilder.addParameter("comments", comments);
-			
-			
+
 			uriBuilder.addParameter("expires", epochTimeExpires.toString());
-			
+
 			HttpGet get = new HttpGet(uriBuilder.build());
-			get.addHeader("_username" , username);
-			get.addHeader("_salt" , salt);
-			get.addHeader("_digest" , digest);
-			get.addHeader("_applicationID" , this.applicationID);
+			get.addHeader("_username", username);
+			get.addHeader("_salt", salt);
+			get.addHeader("_digest", digest);
+			get.addHeader("_applicationID", this.applicationID);
 			HttpResponse response = httpClient.execute(get);
-			
+
 			StatusLine statusLine = response.getStatusLine();
-			if(statusLine.getStatusCode() == 200 && response.getEntity().getContent() !=null )
-			{
+			if (statusLine.getStatusCode() == 200
+					&& response.getEntity().getContent() != null) {
 				return serverResponseToAPIKey(response);
+			} else {
+				String message = response.getEntity().getContent() != null ? convertStreamToString(response
+						.getEntity().getContent()) : "";
+				throw new ServerException(statusLine.getStatusCode(), message);
 			}
-			else
-			{
-				serverDump(response);
-				throw new Exception("Unable to Authorize user [" + username + "]");
-			}
+		} catch (ClientException e) {
+			throw e;
+		} catch (ServerException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new ClientException(e);
 		}
 
+	}
 
+	public String revokeAccess(String username, String comments)
+			throws ServerException, ClientException {
 
-		public String revokeAccess(String username, String comments) throws Exception {
+		try {
 			String salt = UUID.randomUUID().toString();
-			String digest = calculateDigestValue(this.applicationID, this.applicationSecretKey, salt, username);
-			
+			String digest = calculateDigestValue(this.applicationID,
+					this.applicationSecretKey, salt, username);
+
 			URI baseUri = new URI(baseUrl);
-			URIBuilder uriBuilder = new URIBuilder(baseUri.toString() + "/revokeUser" );
-			
-			if(comments!=null)
+			URIBuilder uriBuilder = new URIBuilder(baseUri.toString()
+					+ "/revokeUser");
+
+			if (comments != null)
 				uriBuilder.addParameter("comments", comments);
-			
-			
+
 			HttpDelete delete = new HttpDelete(uriBuilder.build());
-			delete.addHeader("_username" , username);
-			delete.addHeader("_salt" , salt);
-			delete.addHeader("_digest" , digest);
-			delete.addHeader("_applicationID" , this.applicationID);
+			delete.addHeader("_username", username);
+			delete.addHeader("_salt", salt);
+			delete.addHeader("_digest", digest);
+			delete.addHeader("_applicationID", this.applicationID);
 			HttpResponse response = httpClient.execute(delete);
-			
+
 			StatusLine statusLine = response.getStatusLine();
-			if(statusLine.getStatusCode() == 200 && response.getEntity().getContent() !=null )
-			{
+			if (statusLine.getStatusCode() == 200
+					&& response.getEntity().getContent() != null) {
 				return convertStreamToString(response.getEntity().getContent());
+			} else {
+				String message = response.getEntity().getContent() != null ? convertStreamToString(response
+						.getEntity().getContent()) : "";
+				throw new ServerException(statusLine.getStatusCode(), message);
 			}
-			else
-			{
-				serverDump(response);
-				throw new Exception("Unable to Revoke user [" + username + "]");
-			}
+		} catch (ClientException e) {
+			throw e;
+		} catch (ServerException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new ClientException(e);
 		}
 
+	}
 
-
-		public List<APIKey> listAPIKeys()  throws Exception {
+	public List<APIKey> listAPIKeys() throws ServerException, ClientException {
+		try {
 			String salt = UUID.randomUUID().toString();
-			String username = UUID.randomUUID().toString(); // username for this method is not required. so assign any random value
-			String digest = calculateDigestValue(this.applicationID, this.applicationSecretKey, salt, username);
-			
+			String username = UUID.randomUUID().toString(); // username for this
+															// method is not
+															// required. so
+															// assign any random
+															// value
+			String digest = calculateDigestValue(this.applicationID,
+					this.applicationSecretKey, salt, username);
+
 			URI baseUri = new URI(baseUrl);
-			URIBuilder uriBuilder = new URIBuilder(baseUri.toString() + "/listAPIkeys" );
-			
-			
+			URIBuilder uriBuilder = new URIBuilder(baseUri.toString()
+					+ "/listAPIkeys");
+
 			HttpGet get = new HttpGet(uriBuilder.build());
-			get.addHeader("_username" , username);
-			get.addHeader("_salt" , salt);
-			get.addHeader("_digest" , digest);
-			get.addHeader("_applicationID" , this.applicationID);
+			get.addHeader("_username", username);
+			get.addHeader("_salt", salt);
+			get.addHeader("_digest", digest);
+			get.addHeader("_applicationID", this.applicationID);
 			HttpResponse response = httpClient.execute(get);
-			
+
 			StatusLine statusLine = response.getStatusLine();
-			if(statusLine.getStatusCode() == 200 && response.getEntity().getContent() !=null )
-			{
-				String retVal = convertStreamToString(response.getEntity().getContent());
+			if (statusLine.getStatusCode() == 200
+					&& response.getEntity().getContent() != null) {
+				String retVal = convertStreamToString(response.getEntity()
+						.getContent());
 				JsonObject json = jsonParser.parse(retVal).getAsJsonObject();
 				JsonArray jsonArray = json.get("apiKeys").getAsJsonArray();
 				List<APIKey> apiKeyArray = new ArrayList<APIKey>();
 				Iterator<JsonElement> iter = jsonArray.iterator();
 				String applicationID = json.get("applicationID").getAsString();
-				String applicationName = json.get("applicationName").getAsString();
-				while(iter.hasNext())
-				{
+				String applicationName = json.get("applicationName")
+						.getAsString();
+				while (iter.hasNext()) {
 					JsonObject apiKeyJson = iter.next().getAsJsonObject();
 					APIKey apiKey = new APIKey();
 					apiKey.setApplicationID(applicationID);
 					apiKey.setApplicationName(applicationName);
-					apiKey.setExpires(apiKeyJson.get("dateExpires").getAsString());
+					apiKey.setExpires(apiKeyJson.get("dateExpires")
+							.getAsString());
 					apiKey.setValue(apiKeyJson.get("apiKey").getAsString());
-					apiKey.setUsername(apiKeyJson.get("emailAddress").getAsString());
+					apiKey.setUsername(apiKeyJson.get("emailAddress")
+							.getAsString());
 					apiKeyArray.add(apiKey);
 				}
 				return apiKeyArray;
+			} else {
+				String message = response.getEntity().getContent() != null ? convertStreamToString(response
+						.getEntity().getContent()) : "";
+				throw new ServerException(statusLine.getStatusCode(), message);
 			}
-			else
-			{
-				serverDump(response);
-				throw new Exception("Unable to List Users");
-			}
+		} catch (ClientException e) {
+			throw e;
+		} catch (ServerException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new ClientException(e);
 		}
 
+	}
 
 }
