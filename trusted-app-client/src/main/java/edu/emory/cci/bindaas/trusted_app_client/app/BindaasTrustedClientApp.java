@@ -20,6 +20,7 @@ import edu.emory.cci.bindaas.trusted_app_client.core.TrustedAppClientImpl;
 public class BindaasTrustedClientApp {
 
 	private Option action;
+	private Option protocol;
 	private Option applicationID;
 	private Option applicationSecret;
 	private Option baseUrl;
@@ -38,6 +39,7 @@ public class BindaasTrustedClientApp {
 		dateFormat = new SimpleDateFormat("MM/dd/yyyy");
 		gson = new Gson();
 		action = new Option("action" , true  , "Action to be performed. Allowed values are :\n a - authorize new user \n r - revoke user \n i - issue short-lived API Key"); 
+		protocol = new Option("protocol",true,"Authentication protocol to use. Allowed values are:\n api_key - use API KEY\n jwt - use JSON Web Token");
 		applicationID = new Option("id" , true , "Application ID");
 		applicationSecret = new Option("secret" , true , "Application Secret ");
 		username = new Option("username" , true , "Username");
@@ -49,6 +51,7 @@ public class BindaasTrustedClientApp {
 		
 		this.options = new Options();
 		options.addOption(action);
+		options.addOption(protocol);
 		options.addOption(applicationID);
 		options.addOption(applicationSecret);
 		options.addOption(username);
@@ -82,7 +85,7 @@ public class BindaasTrustedClientApp {
 	    		{
 	    			Arguments authArg = parseAuthorizeArguments(line);
 	    			TrustedAppClientImpl client = new TrustedAppClientImpl(authArg.baseUrl,authArg.applicationID, authArg.applicationSecret);
-	    			APIKey apiKey = client.authorizeNewUser(authArg.username, authArg.expiry.getTime(), authArg.comments);
+	    			APIKey apiKey = client.authorizeNewUser(authArg.protocol, authArg.username, authArg.expiry.getTime(), authArg.comments);
 	    			System.out.println("Server Returned :\n" + gson.toJson(apiKey));
 	    		}else if(action.equals("r"))
 	    		{
@@ -179,7 +182,23 @@ public class BindaasTrustedClientApp {
 		{
 			throw new IllegalArgumentException("[username] not specified");
 		}
-		
+
+		if(line.hasOption("protocol"))
+		{
+			if(line.getOptionValue("protocol").matches("api_key|jwt")){
+				args.protocol = line.getOptionValue("protocol");
+			}
+			else {
+				throw new IllegalArgumentException("Illegal value for [protocol]");
+			}
+
+		}
+		else
+		{
+			args.protocol = "api_key";
+			System.out.println("[protocol] not specified");
+			System.out.println("default value of api_key set");
+		}
 		if(line.hasOption("id"))
 		{
 			args.applicationID = line.getOptionValue("id");
@@ -365,6 +384,7 @@ public class BindaasTrustedClientApp {
 		String username;
 		String applicationID;
 		String applicationSecret;
+		String protocol;
 		Date expiry;
 		String comments;
 		Integer lifetime;

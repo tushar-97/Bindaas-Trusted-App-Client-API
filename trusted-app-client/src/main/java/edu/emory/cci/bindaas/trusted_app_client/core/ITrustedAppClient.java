@@ -10,7 +10,7 @@ public interface ITrustedAppClient {
 
 public APIKey getShortLivedAPIKey( String username , Integer lifetime ) throws ServerException, ClientException;
 
-public APIKey authorizeNewUser( String username ,  Long epochTimeExpires  , String comments) throws ServerException, ClientException;
+public APIKey authorizeNewUser(String protocol, String username ,  Long epochTimeExpires  , String comments) throws ServerException, ClientException;
 	
 public String revokeAccess( String username ,   String comments) throws ServerException, ClientException;
 

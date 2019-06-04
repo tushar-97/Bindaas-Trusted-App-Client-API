@@ -115,9 +115,9 @@ public class SpreadsheetImporter {
 							"{ 'username' : '%s' , 'role' : '%s' }", username,
 							role);
 					Date dateExpires = dateFormat.parse(expires);
-
+					// FIXME fix protocol
 					try {
-						APIKey apiKey = trustedAppClient.authorizeNewUser(
+						APIKey apiKey = trustedAppClient.authorizeNewUser("api_key",
 								email, dateExpires.getTime(), comments);
 						String serverResponse = gson.toJson(apiKey);
 						System.out.println(username + "|\t" + email + "|\t"

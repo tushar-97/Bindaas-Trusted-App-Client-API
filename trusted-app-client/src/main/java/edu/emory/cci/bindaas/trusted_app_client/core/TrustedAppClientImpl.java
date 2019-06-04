@@ -142,7 +142,7 @@ public class TrustedAppClientImpl implements ITrustedAppClient {
 		System.out.println(serverDump.toString());
 	}
 
-	public APIKey authorizeNewUser(String username, Long epochTimeExpires,
+	public APIKey authorizeNewUser(String protocol, String username, Long epochTimeExpires,
 			String comments) throws ServerException, ClientException {
 		try {
 			String salt = UUID.randomUUID().toString();
@@ -159,6 +159,7 @@ public class TrustedAppClientImpl implements ITrustedAppClient {
 			uriBuilder.addParameter("expires", epochTimeExpires.toString());
 
 			HttpGet get = new HttpGet(uriBuilder.build());
+			get.addHeader("_protocol", protocol);
 			get.addHeader("_username", username);
 			get.addHeader("_salt", salt);
 			get.addHeader("_digest", digest);
