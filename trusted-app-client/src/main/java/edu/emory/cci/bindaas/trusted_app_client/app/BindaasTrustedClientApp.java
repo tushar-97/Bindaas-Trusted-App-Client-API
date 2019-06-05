@@ -13,6 +13,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 
 import edu.emory.cci.bindaas.trusted_app_client.core.APIKey;
 import edu.emory.cci.bindaas.trusted_app_client.core.TrustedAppClientImpl;
@@ -37,7 +39,7 @@ public class BindaasTrustedClientApp {
 	public void init()
 	{
 		dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-		gson = new Gson();
+		gson = new GsonBuilder().setPrettyPrinting().create();
 		action = new Option("action" , true  , "Action to be performed. Allowed values are :\n a - authorize new user \n r - revoke user \n i - issue short-lived API Key"); 
 		protocol = new Option("protocol",true,"Authentication protocol to use. Allowed values are:\n api_key - use API KEY\n jwt - use JSON Web Token");
 		applicationID = new Option("id" , true , "Application ID");
@@ -85,8 +87,8 @@ public class BindaasTrustedClientApp {
 	    		{
 	    			Arguments authArg = parseAuthorizeArguments(line);
 	    			TrustedAppClientImpl client = new TrustedAppClientImpl(authArg.baseUrl,authArg.applicationID, authArg.applicationSecret);
-	    			APIKey apiKey = client.authorizeNewUser(authArg.protocol, authArg.username, authArg.expiry.getTime(), authArg.comments);
-	    			System.out.println("Server Returned :\n" + gson.toJson(apiKey));
+	    			JsonObject response = client.authorizeNewUser(authArg.protocol, authArg.username, authArg.expiry.getTime(), authArg.comments);
+	    			System.out.println("Server Returned :\n" + gson.toJson(response));
 	    		}else if(action.equals("r"))
 	    		{
 	    			Arguments authArg = parseRevokeArguments(line);

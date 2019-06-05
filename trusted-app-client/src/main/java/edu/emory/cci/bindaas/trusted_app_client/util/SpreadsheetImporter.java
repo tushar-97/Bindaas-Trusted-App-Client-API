@@ -13,6 +13,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.gson.Gson;
 
+import com.google.gson.JsonObject;
 import edu.emory.cci.bindaas.trusted_app_client.core.APIKey;
 import edu.emory.cci.bindaas.trusted_app_client.core.ITrustedAppClient;
 import edu.emory.cci.bindaas.trusted_app_client.core.TrustedAppClientImpl;
@@ -117,13 +118,13 @@ public class SpreadsheetImporter {
 					Date dateExpires = dateFormat.parse(expires);
 					// FIXME fix protocol
 					try {
-						APIKey apiKey = trustedAppClient.authorizeNewUser("api_key",
+						JsonObject serverResponse = trustedAppClient.authorizeNewUser("api_key",
 								email, dateExpires.getTime(), comments);
-						String serverResponse = gson.toJson(apiKey);
+
 						System.out.println(username + "|\t" + email + "|\t"
 								+ serverResponse);
 						reportWriter.writeNext(new String[] { username, email,
-								expires, role, serverResponse });
+								expires, role, serverResponse.toString() });
 					} catch (Exception e) {
 						e.printStackTrace();
 						reportWriter.writeNext(new String[] { username, email,

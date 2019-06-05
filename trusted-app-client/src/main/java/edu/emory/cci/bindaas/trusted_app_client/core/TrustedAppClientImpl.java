@@ -18,6 +18,8 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.DefaultHttpClient;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -34,6 +36,7 @@ public class TrustedAppClientImpl implements ITrustedAppClient {
 	private String applicationSecretKey;
 	private DefaultHttpClient httpClient;
 	private JsonParser jsonParser;
+	private Gson gson;
 
 	public TrustedAppClientImpl(String baseUrl, String applicationID,
 			String applicationSecretKey) {
@@ -42,6 +45,7 @@ public class TrustedAppClientImpl implements ITrustedAppClient {
 		this.applicationSecretKey = applicationSecretKey;
 		this.httpClient = new DefaultHttpClient();
 		this.jsonParser = new JsonParser();
+		this.gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 	}
 
 	public static String calculateDigestValue(String applicationID,
@@ -124,6 +128,16 @@ public class TrustedAppClientImpl implements ITrustedAppClient {
 		return apiKey;
 	}
 
+	private JsonObject serverResponseToJSON(HttpResponse response)
+			throws IllegalStateException, IOException {
+		String content = convertStreamToString(response.getEntity()
+				.getContent());
+		JsonObject serverResponseJson = jsonParser.parse(content)
+				.getAsJsonObject();
+
+		return serverResponseJson;
+	}
+
 	private static void serverDump(HttpResponse response)
 			throws IllegalStateException, IOException {
 		StringBuffer serverDump = new StringBuffer();
@@ -142,7 +156,7 @@ public class TrustedAppClientImpl implements ITrustedAppClient {
 		System.out.println(serverDump.toString());
 	}
 
-	public APIKey authorizeNewUser(String protocol, String username, Long epochTimeExpires,
+	public JsonObject authorizeNewUser(String protocol, String username, Long epochTimeExpires,
 			String comments) throws ServerException, ClientException {
 		try {
 			String salt = UUID.randomUUID().toString();
@@ -169,10 +183,10 @@ public class TrustedAppClientImpl implements ITrustedAppClient {
 			StatusLine statusLine = response.getStatusLine();
 			if (statusLine.getStatusCode() == 200
 					&& response.getEntity().getContent() != null) {
-				return serverResponseToAPIKey(response);
+				return serverResponseToJSON(response);
 			} else {
-				String message = response.getEntity().getContent() != null ? convertStreamToString(response
-						.getEntity().getContent()) : "";
+				String message = response.getEntity().getContent() != null ? gson.toJson(
+						serverResponseToJSON(response)) : "";
 				throw new ServerException(statusLine.getStatusCode(), message);
 			}
 		} catch (ClientException e) {
